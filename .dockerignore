@@ -1,0 +1,9 @@
+.gitignore
+.dockerignore
+deploy
+assets
+*.md
+docker-compose.yaml
+dockerfile
+build.sh
+*.dockerfile

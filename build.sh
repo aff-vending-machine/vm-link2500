@@ -1,0 +1,1 @@
+docker build --platform linux/amd64 -t vm-edc-link2500:0.0.1 .

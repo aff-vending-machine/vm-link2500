@@ -1,0 +1,11 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 200,
+      "driver": "SQLite",
+      "name": "code",
+      "database": "C:\\Users\\ztrix\\Downloads\\jetts.db-20230313"
+    }
+  ],
+  "sqltools.useNodeRuntime": true
+}
