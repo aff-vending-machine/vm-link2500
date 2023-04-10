@@ -70,6 +70,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 	if err != nil {
 		log.Warn().Err(err).Msg("EDC: (3) received error, need to manual inquiry")
 
+		count := 0
 		for {
 			select {
 			case <-ctx.Done():
@@ -77,30 +78,47 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 				return nil, fmt.Errorf("cancelled")
 
 			default:
+				count++;
+				if count == 10 {
+					log.Warn().Msg("inquiry cancelled")
+					return nil, fmt.Errorf("cancelled by system")
+				}
+
 				log.Info().Msg("inquiry")
 				result, err := e.inquiry(stream)
 				if err != nil {
 					return nil, err
 				}
 
+				if len(result) == 1 {
+					log.Err(err).Bytes("result", result).Msg("response data delay retry")
+					stream.Flush()
+					time.Sleep(3 * time.Second)
+					continue
+				}
+
+				if result[0] == 0x06 && result[1] == 0x02 {
+					result = result[1:]
+				}
+
 				if result[0] != 0x02 {
 					log.Err(err).Bytes("result", result).Msg("noise occured, need to flush data and re-inquiry")
 					stream.Flush()
-					time.Sleep(time.Second)
+					time.Sleep(3 * time.Second)
 					continue
 				}
 
 				if len(result) < 24 {
 					log.Err(err).Bytes("result", result).Msg("response data is incorrectly")
 					stream.Flush()
-					time.Sleep(time.Second)
+					time.Sleep(3 * time.Second)
 					continue
 				}
 
 				edcInquiry := generateResult(result)
 
 				if edcInquiry.ResponseText != "APPROVED" {
-					time.Sleep(time.Second)
+					time.Sleep(3 * time.Second)
 					continue
 				}
 

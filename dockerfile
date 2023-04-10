@@ -1,66 +1,47 @@
 ############################
 # STEP 1 prepare the source
 ############################
-FROM golang:1.20 AS builder
+FROM golang:1.20-alpine AS builder
 
 # Set the environment variables for the go command:
-# * CGO_ENABLED=1 to build a non-statically-linked executable
-# * GO111MODULE=on Force the go compiler to use modules
-# * GOOS=linux to run on linuxos
-# * GOARCH=arm64 to run on arm64 architecture
 ENV CGO_ENABLED=0 GO111MODULE=on GOOS=linux GOARCH=amd64
 
-# Create the user and group files that will be used in the running container to
-# run the process as an unprivileged user.
-#
-# Install the Certificate-Authority certificates for the app to be able to make
-# calls to HTTPS endpoints.
-# RUN mkdir /user \
-#   && echo 'nobody:x:65534:65534:nobody:/:' > /user/passwd \
-#   && echo 'nobody:x:65534:' > /user/group
+# Create a non-root user and group
+RUN adduser -D -g '' appuser
 
 # Set the working directory outside $GOPATH to enable the support for modules.
 WORKDIR /src
 
-#This is the ‘magic’ step that will download all the dependencies that are specified in 
-# the go.mod and go.sum file.
-# Because of how the layer caching system works in Docker, the  go mod download 
-# command will _ only_ be re-run when the go.mod or go.sum file change 
-# (or when we add another docker instruction this line)
-# And compile the project
+# Copy go.mod and go.sum and download dependencies
 COPY go.mod go.sum /src/
-
-RUN go mod download \
-  && go mod verify
+RUN go mod tidy
 
 # Import the code from the context.
 COPY . /src/
 
-#compile the project
-RUN go build \
-  # -mod=mod \
-  # -a \
-  # -installsuffix 'static' \
-  -o /bin/app \
-  /src/cmd/app
+# Build the Go application
+RUN go build -o /bin/app /src/cmd/app
 
-# ############################
-# # STEP 2 the running container
-# ############################
-FROM scratch AS final
+############################
+# STEP 2 the running container
+############################
+FROM alpine AS runner
 LABEL maintainer="Tanawat Hongthai <ztrixack.th@gmail.com>"
 
-# Import the user and group files from the first stage.
-# COPY --from=builder /user/group /user/passwd /etc/
+# Import the user and group from the builder stage.
+COPY --from=builder /etc/passwd /etc/group /etc/
 
 # Import the Certificate-Authority certificates for enabling HTTPS.
-# COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy our static executable.
-COPY --from=builder /bin/app /app
+# Copy the compiled Go application and set ownership to appuser
+COPY --from=builder --chown=appuser:appuser /bin/app /bin/app
 
-# Perform any further action as an unprivileged user.
-# USER nobody:nobody
+# Give appuser permission to access ttyACM0
+RUN chown :appuser /dev/ttyACM0 && chmod g+rw /dev/ttyACM0
 
-# Run the binary.
-ENTRYPOINT ["/app"]
+# Switch to the non-root user
+USER appuser
+
+# Start the application
+CMD ["/bin/app"]

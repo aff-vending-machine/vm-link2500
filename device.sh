@@ -10,8 +10,8 @@
 # -----------------
 
 # Set the vendor and product IDs for your USB device
-VENDOR_ID="0000"
-PRODUCT_ID="0000"
+VENDOR_ID="0b00"
+PRODUCT_ID="0083"
 # Set the symlink name for your device
 SYMLINK_NAME="link2500"
 
@@ -37,6 +37,5 @@ echo "Symlink name: /dev/${SYMLINK_NAME}"
 #   ...
 #     devices:
 #       - /dev/link2500:/dev/ttyACM0
-#     user: root:dialout
 #   ...
 # -----------------

@@ -1,1 +1,1 @@
-docker build --platform linux/arm64 -t vm-link2500:1.0.0-arm64 .
+docker build --platform linux/arm64 -t vm-link2500:0.0.0-arm64 .
