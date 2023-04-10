@@ -3,6 +3,7 @@ package link2500
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
 	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/response"
@@ -58,7 +59,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 		return nil, err
 	}
 
-	log.Info().Bytes("result", result1[:n]).Msg("EDC: (2) received")
+	log.Info().Int("length", n).Bytes("result", result1[:n]).Msg("EDC: (2) received")
 	if n != 1 || result1[0] != 0x06 {
 		return nil, fmt.Errorf("receive unknown message (%d): %v", n, result1[:n])
 	}
@@ -67,19 +68,49 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 	result2 := make([]byte, 1024)
 	n, err = stream.Read(result2)
 	if err != nil {
-		log.Error().Err(err).Msg("EDC: (3) received error, need to manual inquiry")
-		result, err := e.inquiry(stream)
-		if err != nil {
-			return nil, err
+		log.Warn().Err(err).Msg("EDC: (3) received error, need to manual inquiry")
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Warn().Msg("inquiry cancelled")
+				return nil, fmt.Errorf("cancelled")
+
+			default:
+				log.Info().Msg("inquiry")
+				result, err := e.inquiry(stream)
+				if err != nil {
+					return nil, err
+				}
+
+				if result[0] != 0x02 {
+					log.Err(err).Bytes("result", result).Msg("noise occured, need to flush data and re-inquiry")
+					stream.Flush()
+					time.Sleep(time.Second)
+					continue
+				}
+
+				if len(result) < 24 {
+					log.Err(err).Bytes("result", result).Msg("response data is incorrectly")
+					stream.Flush()
+					time.Sleep(time.Second)
+					continue
+				}
+
+				edcInquiry := generateResult(result)
+
+				if edcInquiry.ResponseText != "APPROVED" {
+					time.Sleep(time.Second)
+					continue
+				}
+
+				return edcInquiry, nil
+			}
 		}
-
-		edcInquiry := generateResult(result)
-
-		return edcInquiry, nil
 
 	} else {
 		result := result2[:n]
-		log.Info().Bytes("result", result).Msg("EDC (3) received")
+		log.Info().Int("length", n).Bytes("result", result).Msg("EDC (3) received")
 
 		edcResult := generateResult(result)
 
@@ -105,7 +136,7 @@ func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
 	lrc := calLRC(payload)
 	payload = concat(stx, payload, []byte{lrc})
 
-	log.Info().Bytes("payload", payload).Msg("EDC (3) send inquiry")
+	log.Info().Bytes("payload", payload).Msg("EDC (3.1) send inquiry")
 	_, err := stream.Write(payload)
 	if err != nil {
 		return nil, err
@@ -116,7 +147,7 @@ func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Bytes("result", result).Msg("EDC (3) received inquiry")
+	log.Info().Int("length", n).Bytes("result", result[:n]).Msg("EDC (3.2) received inquiry")
 
 	return result[:n], nil
 }

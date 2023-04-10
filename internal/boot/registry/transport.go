@@ -6,17 +6,17 @@ import (
 )
 
 // Interface Adapter layers (driver)
-type AppDriver struct {
-	HTTP AppHTTPDriver
+type Transport struct {
+	HTTP HTTPTransport
 }
 
-type AppHTTPDriver struct {
+type HTTPTransport struct {
 	Link2500 http.Link2500
 }
 
-func NewAppDriver(uc AppUsecase) AppDriver {
-	return AppDriver{
-		AppHTTPDriver{
+func NewTransport(uc Usecase) Transport {
+	return Transport{
+		HTTPTransport{
 			link2500.New(uc.Link2500),
 		},
 	}

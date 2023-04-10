@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/aff-vending-machine/vm-link2500/config"
-	"github.com/aff-vending-machine/vm-link2500/internal/app"
+	"github.com/aff-vending-machine/vm-link2500/internal/boot/registry/app"
 	"github.com/aff-vending-machine/vm-link2500/pkg/boot"
 	"github.com/aff-vending-machine/vm-link2500/pkg/log"
 )

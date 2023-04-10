@@ -53,7 +53,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 		return nil, err
 	}
 
-	log.Info().Bytes("result", result1[:n]).Msg("EDC: (2) received")
+	log.Info().Int("length", n).Bytes("result", result1[:n]).Msg("EDC: (2) received")
 	if n != 1 || result1[0] != 0x06 {
 		return nil, fmt.Errorf("receive unknown message (%d): %v", n, result1[:n])
 	}
@@ -66,7 +66,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 	}
 
 	result := result2[:n]
-	log.Info().Bytes("result", result).Msg("EDC (3) received")
+	log.Info().Int("length", n).Bytes("result", result).Msg("EDC (3) received")
 	edcResult := generateResult(result)
 
 	// 4. POS response ACK to EDC

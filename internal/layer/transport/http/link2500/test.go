@@ -1,7 +1,7 @@
 package link2500
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/core/infra/fiber/http"
+	"github.com/aff-vending-machine/vm-link2500/internal/core/module/fiber/http"
 	"github.com/aff-vending-machine/vm-link2500/pkg/trace"
 	"github.com/gofiber/fiber/v2"
 )

@@ -1,6 +1,6 @@
 package fiber
 
-import "github.com/aff-vending-machine/vm-link2500/internal/core/infra/fiber"
+import "github.com/aff-vending-machine/vm-link2500/internal/core/module/fiber"
 
 type server struct {
 	*fiber.Wrapper
