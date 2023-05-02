@@ -46,7 +46,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 	payload = concat(stx, payload, []byte{lrc})
 
 	// 1. POS send request to EDC
-	log.Info().Bytes("payload", payload).Msg("EDC: (1) send")
+	log.Info().Str("payload", toHex(payload)).Msg("EDC: (1) send")
 	_, err = stream.Write(payload)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 		return nil, err
 	}
 
-	log.Info().Int("length", n).Bytes("result", result1[:n]).Msg("EDC: (2) received")
+	log.Info().Int("length", n).Str("result", toHex(result1[:n])).Msg("EDC: (2) received")
 	if n != 1 || result1[0] != 0x06 {
 		return nil, fmt.Errorf("receive unknown message (%d): %v", n, result1[:n])
 	}
@@ -78,7 +78,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 				return nil, fmt.Errorf("cancelled")
 
 			default:
-				count++;
+				count++
 				if count == 10 {
 					log.Warn().Msg("inquiry cancelled")
 					return nil, fmt.Errorf("cancelled by system")
@@ -91,7 +91,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 				}
 
 				if len(result) == 1 {
-					log.Err(err).Bytes("result", result).Msg("response data delay retry")
+					log.Err(err).Str("result", toHex(result)).Msg("response data delay retry")
 					stream.Flush()
 					time.Sleep(3 * time.Second)
 					continue
@@ -102,14 +102,14 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 				}
 
 				if result[0] != 0x02 {
-					log.Err(err).Bytes("result", result).Msg("noise occured, need to flush data and re-inquiry")
+					log.Err(err).Str("result", toHex(result)).Msg("noise occured, need to flush data and re-inquiry")
 					stream.Flush()
 					time.Sleep(3 * time.Second)
 					continue
 				}
 
 				if len(result) < 24 {
-					log.Err(err).Bytes("result", result).Msg("response data is incorrectly")
+					log.Err(err).Str("result", toHex(result)).Msg("response data is incorrectly")
 					stream.Flush()
 					time.Sleep(3 * time.Second)
 					continue
@@ -128,12 +128,13 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 	} else {
 		result := result2[:n]
-		log.Info().Int("length", n).Bytes("result", result).Msg("EDC (3) received")
+		log.Info().Int("length", n).Str("result", toHex(result)).Msg("EDC (3) received")
 
 		edcResult := generateResult(result)
+		log.Info().Interface("result", edcResult).Msg("EDC (3) received")
 
 		// 4. POS response ACK to EDC
-		log.Info().Bytes("payload", []byte{0x06}).Msg("EDC: (4) send")
+		log.Info().Str("payload", "06").Msg("EDC: (4) send")
 		_, err = stream.Write([]byte{0x06})
 		if err != nil {
 			return nil, err
@@ -154,7 +155,7 @@ func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
 	lrc := calLRC(payload)
 	payload = concat(stx, payload, []byte{lrc})
 
-	log.Info().Bytes("payload", payload).Msg("EDC (3.1) send inquiry")
+	log.Info().Str("payload", toHex(payload)).Msg("EDC (3.1) send inquiry")
 	_, err := stream.Write(payload)
 	if err != nil {
 		return nil, err
@@ -165,7 +166,7 @@ func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info().Int("length", n).Bytes("result", result[:n]).Msg("EDC (3.2) received inquiry")
+	log.Info().Int("length", n).Str("result", toHex(result[:n])).Msg("EDC (3.2) received inquiry")
 
 	return result[:n], nil
 }

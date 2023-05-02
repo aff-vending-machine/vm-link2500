@@ -40,7 +40,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 	payload = concat(stx, payload, []byte{lrc})
 
 	// 1. POS send request to EDC
-	log.Info().Bytes("payload", payload).Msg("EDC: (1) send")
+	log.Info().Str("payload", toHex(payload)).Msg("EDC: (1) send")
 	_, err = stream.Write(payload)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 		return nil, err
 	}
 
-	log.Info().Int("length", n).Bytes("result", result1[:n]).Msg("EDC: (2) received")
+	log.Info().Int("length", n).Str("result", toHex(result1[:n])).Msg("EDC: (2) received")
 	if n != 1 || result1[0] != 0x06 {
 		return nil, fmt.Errorf("receive unknown message (%d): %v", n, result1[:n])
 	}
@@ -66,11 +66,13 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 	}
 
 	result := result2[:n]
-	log.Info().Int("length", n).Bytes("result", result).Msg("EDC (3) received")
+	log.Info().Int("length", n).Str("result", toHex(result)).Msg("EDC (3) received")
+
 	edcResult := generateResult(result)
+	log.Info().Interface("result", edcResult).Msg("EDC (3) received")
 
 	// 4. POS response ACK to EDC
-	log.Info().Bytes("payload", []byte{0x06}).Msg("EDC: (4) send")
+	log.Info().Str("payload", "06").Msg("EDC: (4) send")
 	_, err = stream.Write([]byte{0x06})
 	if err != nil {
 		return nil, err

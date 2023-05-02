@@ -146,3 +146,12 @@ func generateSettlementResult(buf []byte) *response.Settlement {
 
 	return result
 }
+
+func toHex(byteArray []byte) string {
+	hexString := ""
+	for _, b := range byteArray {
+		hexString += fmt.Sprintf("%02x ", b)
+	}
+
+	return hexString
+}
