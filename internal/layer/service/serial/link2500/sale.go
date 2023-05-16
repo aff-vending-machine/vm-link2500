@@ -3,6 +3,7 @@ package link2500
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
@@ -79,7 +80,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 			default:
 				count++
-				if count == 10 {
+				if count == 100 {
 					log.Warn().Msg("inquiry cancelled")
 					return nil, fmt.Errorf("cancelled by system")
 				}
@@ -117,7 +118,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 				edcInquiry := generateResult(result)
 
-				if edcInquiry.ResponseText != "APPROVED" {
+				if strings.Contains(edcInquiry.ResponseText, "APPROVED") {
 					time.Sleep(3 * time.Second)
 					continue
 				}
