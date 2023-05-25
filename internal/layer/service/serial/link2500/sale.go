@@ -118,7 +118,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 				edcInquiry := generateResult(result)
 
-				if strings.Contains(edcInquiry.ResponseText, "APPROVED") {
+				if !strings.Contains(edcInquiry.ResponseText, "APPROVED") {
 					time.Sleep(3 * time.Second)
 					continue
 				}
