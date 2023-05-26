@@ -1,9 +1,8 @@
 package registry
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/wrapper/link2500_wrapper"
+	"vm-link2500/internal/layer/usecase"
+	"vm-link2500/internal/layer/usecase/link2500"
 )
 
 // Usecase layers
@@ -13,8 +12,8 @@ type Usecase struct {
 
 func NewUsecase(adapter Service) Usecase {
 	return Usecase{
-		link2500_wrapper.New(link2500.New(
+		link2500.New(
 			adapter.Serial.Link2500,
-		)),
+		),
 	}
 }

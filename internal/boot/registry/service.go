@@ -1,8 +1,8 @@
 package registry
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/service/serial"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/service/serial/link2500"
+	"vm-link2500/internal/layer/service/serial"
+	"vm-link2500/internal/layer/service/serial/link2500"
 )
 
 // Interface Adapter layers (driven)

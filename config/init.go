@@ -68,6 +68,6 @@ func bindEnvs(vp *viper.Viper, iface interface{}, parts ...string) {
 
 func preview(conf BootConfig) {
 	log.Debug().Interface("App", conf.App).Msg("configuration")
-	log.Debug().Interface("Fiber", conf.Fiber).Msg("configuration")
-	log.Debug().Interface("SmartEDC", conf.Link2500).Msg("configuration")
+	log.Debug().Interface("Gin", conf.Gin).Msg("configuration")
+	log.Debug().Interface("Link2500", conf.Link2500).Msg("configuration")
 }

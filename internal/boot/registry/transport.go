@@ -1,8 +1,8 @@
 package registry
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/transport/http"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/transport/http/link2500"
+	"vm-link2500/internal/layer/transport/http"
+	"vm-link2500/internal/layer/transport/http/link2500"
 )
 
 // Interface Adapter layers (driver)
