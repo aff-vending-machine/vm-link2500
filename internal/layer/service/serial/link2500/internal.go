@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/response"
+	"vm-link2500/internal/layer/usecase/link2500/response"
 )
 
 func makeTransportHeader() []byte {

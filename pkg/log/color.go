@@ -46,7 +46,7 @@ func ColorConsole() io.Writer {
 			paths := strings.Split(i.(string), "/")
 			size := len(paths)
 			caller := fmt.Sprintf("%s/%s/%s", paths[size-3], paths[size-2], paths[size-1])
-			return fmt.Sprintf("%-32s", caller)
+			return fmt.Sprintf("%-36s", caller)
 		},
 	}
 }

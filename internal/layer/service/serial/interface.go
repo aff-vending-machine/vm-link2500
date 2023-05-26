@@ -3,8 +3,8 @@ package serial
 import (
 	"context"
 
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/response"
+	"vm-link2500/internal/layer/usecase/link2500/request"
+	"vm-link2500/internal/layer/usecase/link2500/response"
 )
 
 type Link2500 interface {

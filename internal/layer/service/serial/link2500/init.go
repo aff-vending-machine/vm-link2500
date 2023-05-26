@@ -3,7 +3,8 @@ package link2500
 import (
 	"time"
 
-	"github.com/aff-vending-machine/vm-link2500/config"
+	"vm-link2500/config"
+
 	"github.com/tarm/serial"
 )
 

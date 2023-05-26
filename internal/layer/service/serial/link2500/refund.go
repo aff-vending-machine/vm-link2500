@@ -4,17 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/response"
-	"github.com/aff-vending-machine/vm-link2500/pkg/trace"
+	"vm-link2500/internal/core/module/serial"
+
+	"vm-link2500/internal/layer/usecase/link2500/request"
+	"vm-link2500/internal/layer/usecase/link2500/response"
+
 	"github.com/rs/zerolog/log"
-	"github.com/tarm/serial"
 )
 
 func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response.Result, error) {
-	_, span := trace.Start(ctx)
-	defer span.End()
-
 	stream, err := serial.OpenPort(e.config)
 	if err != nil {
 		return nil, err
@@ -41,14 +39,14 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 
 	// 1. POS send request to EDC
 	log.Info().Str("payload", toHex(payload)).Msg("EDC: (1) send")
-	_, err = stream.Write(payload)
+	err = stream.Write(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
 
 	// 2. EDC response ACK to POS
 	result1 := make([]byte, 1)
-	n, err := stream.Read(result1)
+	n, err := stream.Read(ctx, result1)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +58,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 
 	// 3. EDC return Result to POS
 	result2 := make([]byte, 1024)
-	n, err = stream.Read(result2)
+	n, err = stream.Read(ctx, result2)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +71,7 @@ func (e *serialImpl) Refund(ctx context.Context, req *request.Refund) (*response
 
 	// 4. POS response ACK to EDC
 	log.Info().Str("payload", "06").Msg("EDC: (4) send")
-	_, err = stream.Write([]byte{0x06})
+	err = stream.Write(ctx, []byte{0x06})
 	if err != nil {
 		return nil, err
 	}
