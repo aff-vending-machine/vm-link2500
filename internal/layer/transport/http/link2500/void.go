@@ -1,35 +1,39 @@
 package link2500
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/core/module/fiber/http"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
-	"github.com/aff-vending-machine/vm-link2500/pkg/trace"
-	"github.com/gofiber/fiber/v2"
+	"context"
+
+	"vm-link2500/internal/core/module/gin/http"
+	"vm-link2500/internal/layer/usecase/link2500/request"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
-func (t *httpImpl) Void(c *fiber.Ctx) error {
-	ctx, span := trace.Start(c.Context())
-	defer span.End()
+func (t *httpImpl) Void(c *gin.Context) {
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
 
 	req, err := makeVoidRequest(c)
 	if err != nil {
-		trace.RecordError(span, err)
-		return http.BadRequest(c, err)
+		log.Error().Err(err).Msg("unable to parse request")
+		http.BadRequest(c, err)
+		return
 	}
 
 	// usecase execution
 	res, err := t.usecase.Void(ctx, req)
 	if err != nil {
-		trace.RecordError(span, err)
-		return http.UsecaseError(c, err)
+		http.UsecaseError(c, err)
+		return
 	}
 
-	return http.OK(c, res)
+	http.OK(c, res)
 }
 
-func makeVoidRequest(c *fiber.Ctx) (*request.Void, error) {
+func makeVoidRequest(c *gin.Context) (*request.Void, error) {
 	var req request.Void
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		return nil, err
 	}
 

@@ -1,11 +1,13 @@
 package http
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gin-gonic/gin"
+)
 
 type Link2500 interface {
-	Test(*fiber.Ctx) error       // POST {link2500/test}
-	Sale(*fiber.Ctx) error       // POST {link2500/sale}
-	Void(*fiber.Ctx) error       // POST {link2500/void}
-	Refund(*fiber.Ctx) error     // POST {link2500/refund}
-	Settlement(*fiber.Ctx) error // POST {link2500/settlement}
+	Refund(*gin.Context)     // POST {link2500/refund}
+	Sale(*gin.Context)       // POST {link2500/sale}
+	Settlement(*gin.Context) // POST {link2500/settlement}
+	Test(*gin.Context)       // POST {link2500/test}
+	Void(*gin.Context)       // POST {link2500/void}
 }

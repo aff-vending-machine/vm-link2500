@@ -1,35 +1,39 @@
 package link2500
 
 import (
-	"github.com/aff-vending-machine/vm-link2500/internal/core/module/fiber/http"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
-	"github.com/aff-vending-machine/vm-link2500/pkg/trace"
-	"github.com/gofiber/fiber/v2"
+	"context"
+
+	"vm-link2500/internal/core/module/gin/http"
+	"vm-link2500/internal/layer/usecase/link2500/request"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
-func (t *httpImpl) Refund(c *fiber.Ctx) error {
-	ctx, span := trace.Start(c.Context())
-	defer span.End()
+func (t *httpImpl) Refund(c *gin.Context) {
+	ctx, cancel := context.WithCancel(c.Request.Context())
+	defer cancel()
 
 	req, err := makeRefundRequest(c)
 	if err != nil {
-		trace.RecordError(span, err)
-		return http.BadRequest(c, err)
+		log.Error().Err(err).Msg("unable to parse request")
+		http.BadRequest(c, err)
+		return
 	}
 
 	// usecase execution
 	res, err := t.usecase.Refund(ctx, req)
 	if err != nil {
-		trace.RecordError(span, err)
-		return http.UsecaseError(c, err)
+		http.UsecaseError(c, err)
+		return
 	}
 
-	return http.OK(c, res)
+	http.OK(c, res)
 }
 
-func makeRefundRequest(c *fiber.Ctx) (*request.Refund, error) {
+func makeRefundRequest(c *gin.Context) (*request.Refund, error) {
 	var req request.Refund
-	if err := c.BodyParser(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		return nil, err
 	}
 
