@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/request"
-	"github.com/aff-vending-machine/vm-link2500/internal/layer/usecase/link2500/response"
-	"github.com/aff-vending-machine/vm-link2500/pkg/trace"
+	"vm-link2500/internal/core/module/serial"
+	"vm-link2500/internal/layer/usecase/link2500/request"
+	"vm-link2500/internal/layer/usecase/link2500/response"
+
 	"github.com/rs/zerolog/log"
-	"github.com/tarm/serial"
 )
 
 // Process Flow
@@ -19,9 +19,6 @@ import (
 // 3. EDC return Result to POS
 // 4. POS response ACK to EDC
 func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Result, error) {
-	_, span := trace.Start(ctx)
-	defer span.End()
-
 	stream, err := serial.OpenPort(e.config)
 	if err != nil {
 		return nil, err
@@ -48,14 +45,14 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 	// 1. POS send request to EDC
 	log.Info().Str("payload", toHex(payload)).Msg("EDC: (1) send")
-	_, err = stream.Write(payload)
+	err = stream.Write(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
 
 	// 2. EDC response ACK to POS
 	result1 := make([]byte, 1)
-	n, err := stream.Read(result1)
+	n, err := stream.Read(ctx, result1)
 	if err != nil {
 		return nil, err
 	}
@@ -67,66 +64,58 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 	// 3. EDC return Result to POS
 	result2 := make([]byte, 1024)
-	n, err = stream.Read(result2)
+	n, err = stream.Read(ctx, result2)
 	if err != nil {
 		log.Warn().Err(err).Msg("EDC: (3) received error, need to manual inquiry")
 
 		count := 0
 		for {
-			select {
-			case <-ctx.Done():
-				log.Warn().Msg("inquiry cancelled")
-				return nil, fmt.Errorf("cancelled")
-
-			default:
-				count++
-				if count == 100 {
-					log.Warn().Msg("inquiry cancelled")
-					return nil, fmt.Errorf("cancelled by system")
-				}
-
-				log.Info().Msg("inquiry")
-				result, err := e.inquiry(stream)
-				if err != nil {
-					return nil, err
-				}
-
-				if len(result) == 1 {
-					log.Err(err).Str("result", toHex(result)).Msg("response data delay retry")
-					stream.Flush()
-					time.Sleep(3 * time.Second)
-					continue
-				}
-
-				if result[0] == 0x06 && result[1] == 0x02 {
-					result = result[1:]
-				}
-
-				if result[0] != 0x02 {
-					log.Err(err).Str("result", toHex(result)).Msg("noise occured, need to flush data and re-inquiry")
-					stream.Flush()
-					time.Sleep(3 * time.Second)
-					continue
-				}
-
-				if len(result) < 24 {
-					log.Err(err).Str("result", toHex(result)).Msg("response data is incorrectly")
-					stream.Flush()
-					time.Sleep(3 * time.Second)
-					continue
-				}
-
-				edcInquiry := generateResult(result)
-
-				if !strings.Contains(edcInquiry.ResponseText, "APPROVED") {
-					time.Sleep(3 * time.Second)
-					continue
-				}
-
-				return edcInquiry, nil
+			count++
+			if count == 100 {
+				log.Warn().Msg("inquiry cancelled by system")
+				return nil, fmt.Errorf("cancelled by system")
 			}
-		}
 
+			log.Info().Msg("inquiry")
+			result, err := e.inquiry(ctx, stream)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(result) == 1 {
+				log.Err(err).Str("result", toHex(result)).Msg("response data delay retry")
+				stream.Flush()
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
+			if result[0] == 0x06 && result[1] == 0x02 {
+				result = result[1:]
+			}
+
+			if result[0] != 0x02 {
+				log.Err(err).Str("result", toHex(result)).Msg("noise occured, need to flush data and re-inquiry")
+				stream.Flush()
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
+			if len(result) < 24 {
+				log.Err(err).Str("result", toHex(result)).Msg("response data is incorrectly")
+				stream.Flush()
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
+			edcInquiry := generateResult(result)
+
+			if !strings.Contains(edcInquiry.ResponseText, "APPROVED") {
+				time.Sleep(3 * time.Second)
+				continue
+			}
+
+			return edcInquiry, nil
+		}
 	} else {
 		result := result2[:n]
 		log.Info().Int("length", n).Str("result", toHex(result)).Msg("EDC (3) received")
@@ -136,7 +125,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 
 		// 4. POS response ACK to EDC
 		log.Info().Str("payload", "06").Msg("EDC: (4) send")
-		_, err = stream.Write([]byte{0x06})
+		err = stream.Write(ctx, []byte{0x06})
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +134,7 @@ func (e *serialImpl) Sale(ctx context.Context, req *request.Sale) (*response.Res
 	}
 }
 
-func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
+func (*serialImpl) inquiry(ctx context.Context, stream *serial.SerialPort) ([]byte, error) {
 	stx := []byte{0x02}
 	etx := []byte{0x03}
 	th := makeTransportHeader()
@@ -157,13 +146,13 @@ func (*serialImpl) inquiry(stream *serial.Port) ([]byte, error) {
 	payload = concat(stx, payload, []byte{lrc})
 
 	log.Info().Str("payload", toHex(payload)).Msg("EDC (3.1) send inquiry")
-	_, err := stream.Write(payload)
+	err := stream.Write(ctx, payload)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]byte, 2048)
-	n, err := stream.Read(result)
+	n, err := stream.Read(ctx, result)
 	if err != nil {
 		return nil, err
 	}
