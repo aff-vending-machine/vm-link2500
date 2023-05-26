@@ -18,12 +18,13 @@ func main() {
 	defer boot.Serve()
 
 	initLog(conf)
+	conf.Preview()
 
 	// Run main application
 	app.Run(conf)
 }
 
-func initLog(conf config.BootConfig) {
+func initLog(conf config.Config) {
 	log.SetOutput(log.ColorConsole())
 	log.SetLogLevel(conf.App.LogLevel)
 }

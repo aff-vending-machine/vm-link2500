@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Run(cfg config.BootConfig) {
+func Run(cfg config.Config) {
 	log.Debug().Msg("init application")
 
 	var (

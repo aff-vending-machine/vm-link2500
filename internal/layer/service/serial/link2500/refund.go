@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"vm-link2500/internal/core/module/serial"
+	"vm-link2500/internal/core/infra/peripheral/serial"
 
 	"vm-link2500/internal/layer/usecase/link2500/request"
 	"vm-link2500/internal/layer/usecase/link2500/response"
