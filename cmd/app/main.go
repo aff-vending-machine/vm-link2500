@@ -2,7 +2,7 @@ package main
 
 import (
 	"vm-link2500/config"
-	"vm-link2500/internal/boot/registry/app"
+	"vm-link2500/internal/boot/app"
 	"vm-link2500/pkg/boot"
 	"vm-link2500/pkg/log"
 )
