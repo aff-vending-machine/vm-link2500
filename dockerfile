@@ -19,14 +19,11 @@ RUN adduser -D -g '' appuser
 # Set the working directory outside $GOPATH to enable the support for modules.
 WORKDIR /src
 
-# Copy go.mod and go.sum and download dependencies (comment below if the project has vendor folder)
-COPY go.mod go.sum /src/
+# Copy go.mod, go.sum and dependencies if exists
+COPY go.mod go.sum vendor? /src/
 
 # Check if the "vendor" folder exists on the host
 RUN test -d vendor || go mod tidy
-
-# Copy the vendor folder if it exists
-COPY vendor /src/vendor
 
 # Import the code from the context.
 COPY . /src/
@@ -43,14 +40,14 @@ LABEL maintainer="Tanawat Hongthai <ztrixack.th@gmail.com>"
 # Import the user and group from the builder stage.
 COPY --from=builder /etc/passwd /etc/group /etc/
 
+# Import the timezone data
+COPY --from=builder /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
+
 # Import the Certificate-Authority certificates for enabling HTTPS.
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the compiled Go application and set ownership to appuser
 COPY --from=builder --chown=appuser:appuser /bin/app /bin/app
-
-# Copy the timezone data
-COPY --from=builder /usr/share/zoneinfo/Asia/Bangkok /etc/localtime
 
 # Switch to the non-root user
 USER appuser

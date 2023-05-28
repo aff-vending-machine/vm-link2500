@@ -10,14 +10,20 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Config struct {
+	App      AppConfig      `mapstructure:"APP"`
+	Gin      GinConfig      `mapstructure:"GIN"`
+	Link2500 Link2500Config `mapstructure:"LINK2500"`
+}
+
 // Init creates a new config service.
-func Init(fallback string) BootConfig {
+func Init(fallback string) Config {
 	filename := fallback
 	if value, ok := os.LookupEnv("APP_ENV"); ok {
 		filename = value
 	}
 
-	var out BootConfig
+	var out Config
 	if err := defaults.Set(&out); err != nil {
 		log.Panic().Err(err).Msgf("set default config failed")
 	}
@@ -34,15 +40,13 @@ func Init(fallback string) BootConfig {
 	}
 
 	// set environment variables as overrides.
-	bindEnvs(v, BootConfig{})
+	bindEnvs(v, Config{})
 	v.AutomaticEnv()
 
 	// set config form file or env
 	if err := v.Unmarshal(&out); err != nil {
 		log.Warn().Err(err).Msgf("unmarshal config failed")
 	}
-
-	preview(out)
 
 	return out
 }
@@ -66,7 +70,7 @@ func bindEnvs(vp *viper.Viper, iface interface{}, parts ...string) {
 	}
 }
 
-func preview(conf BootConfig) {
+func (conf Config) Preview() {
 	log.Debug().Interface("App", conf.App).Msg("configuration")
 	log.Debug().Interface("Gin", conf.Gin).Msg("configuration")
 	log.Debug().Interface("Link2500", conf.Link2500).Msg("configuration")

@@ -3,7 +3,7 @@ package link2500
 import (
 	"context"
 
-	"vm-link2500/internal/core/module/gin/http"
+	"vm-link2500/internal/core/infra/network/gin/http"
 	"vm-link2500/internal/layer/usecase/link2500/request"
 
 	"github.com/gin-gonic/gin"

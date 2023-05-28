@@ -1,12 +1,12 @@
 package gin
 
 import (
-	"vm-link2500/internal/boot/registry"
+	"vm-link2500/internal/boot/modules"
 
 	"github.com/rs/zerolog/log"
 )
 
-func (s *server) Serve(driver registry.HTTPTransport) {
+func (s *server) Serve(driver modules.HTTPTransport) {
 	v1 := s.Engine.Group("/api/v1")
 	routeLink2500(v1, driver.Link2500)
 
