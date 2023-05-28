@@ -1,7 +1,7 @@
 package main
 
 import (
-	"vm-link2500/config"
+	"vm-link2500/configs"
 	"vm-link2500/internal/boot/app"
 	"vm-link2500/pkg/boot"
 	"vm-link2500/pkg/log"
@@ -13,7 +13,7 @@ func init() {
 
 func main() {
 	// Create boot with configuration
-	conf := config.Init("env/app")
+	conf := configs.Init("env/app")
 	boot.Init(conf)
 	defer boot.Serve()
 
@@ -24,7 +24,7 @@ func main() {
 	app.Run(conf)
 }
 
-func initLog(conf config.Config) {
+func initLog(conf configs.Config) {
 	log.SetOutput(log.ColorConsole())
 	log.SetLogLevel(conf.App.LogLevel)
 }

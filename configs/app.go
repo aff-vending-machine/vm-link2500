@@ -1,4 +1,4 @@
-package config
+package configs
 
 type AppConfig struct {
 	ENV      string `default:"production" mapstructure:"ENV"`

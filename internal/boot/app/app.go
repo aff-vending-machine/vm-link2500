@@ -1,14 +1,14 @@
 package app
 
 import (
-	"vm-link2500/config"
+	"vm-link2500/configs"
 	"vm-link2500/internal/boot/app/registry"
 	"vm-link2500/internal/boot/router/gin"
 
 	"github.com/rs/zerolog/log"
 )
 
-func Run(cfg config.Config) {
+func Run(cfg configs.Config) {
 	log.Debug().Msg("init application")
 
 	var (
