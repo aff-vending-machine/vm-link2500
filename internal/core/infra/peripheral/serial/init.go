@@ -63,36 +63,50 @@ func (s *SerialPort) Write(ctx context.Context, payload []byte) error {
 }
 
 func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
+	readCtx, cancelled := context.WithCancel(ctx)
+	defer cancelled()
+
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	readCtx, cancelled := context.WithCancel(context.Background())
+	// Create channels to handle read result
+	res := make(chan int, 1)
+	errs := make(chan error, 1)
+
+	// Start a goroutine to read data
 	go func() {
-		select {
-		case <-ctx.Done():
-			// Cancelled from outside, close the port
-			if s.Port != nil {
-				s.Port.Close()
-			}
-			if err := ctx.Err(); err != nil {
-				log.Warn().Str("reason", err.Error()).Msg("port is closed")
-				return
-			}
-			log.Info().Msg("port is closed by user")
-
-		case <-s.done:
-			// Done channel is closed
-			log.Warn().Str("reason", "channel is closed").Msg("port is closed")
-
-		case <-readCtx.Done():
-			// Read context is completed
-			log.Info().Msg("read serial data is completed")
+		n, err := s.Port.Read(payload)
+		if err != nil {
+			errs <- err
+		} else {
+			res <- n
 		}
 	}()
 
-	n, err := s.Port.Read(payload)
+	// Start a goroutine to listen to cancellation signals
+	go func() {
+		select {
+		case <-ctx.Done():
+			// Cancelled from outside
+			log.Info().Msg("Read operation was cancelled by the user")
 
-	cancelled()
+		case <-s.done:
+			// Done channel is closed
+			log.Warn().Str("reason", "channel is closed").Msg("Read operation was cancelled internally")
 
-	return n, err
+		case <-readCtx.Done():
+			// Read context is completed
+			log.Info().Msg("Read operation is completed")
+		}
+	}()
+	
+	// Wait for either the read to complete or the context to be done
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	case n := <-res:
+		return n, nil
+	case err := <-errs:
+		return 0, err
+	}
 }
