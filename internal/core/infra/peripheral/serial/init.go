@@ -27,9 +27,11 @@ func OpenPort(config *serial.Config) (*SerialPort, error) {
 
 func (s *SerialPort) Close() {
 	close(s.done)
-	if err := s.Port.Close(); errs.Not(err, "file already closed") {
-		log.Error().Err(err).Msg("failed to close port")
-		return
+	if s.Port != nil {
+		if err := s.Port.Close(); errs.Not(err, "file already closed") {
+			log.Error().Err(err).Msg("failed to close port")
+			return
+		}
 	}
 
 	s.Port = nil
@@ -62,8 +64,10 @@ func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
 
 	go func() {
 		<-ctx.Done()
-		s.Port.Close()
 		log.Warn().Str("reason", ctx.Err().Error()).Msg("port is closed")
+		if s.Port != nil {
+			s.Port.Close()
+		}
 	}()
 
 	return s.Port.Read(payload)
