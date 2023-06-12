@@ -88,8 +88,10 @@ func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
 
 	// Wait for either the read to complete or the context to be done
 	select {
+	case <-ctx.Done():
+		return 0, ctx.Err() // Return error if ctx is cancelled
 	case <-readCtx.Done():
-		return 0, nil
+		return 0, nil // Return nil if readCtx is cancelled
 	case n := <-res:
 		return n, nil
 	case err := <-errs:
