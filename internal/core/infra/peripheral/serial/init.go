@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"vm-link2500/pkg/helpers/errs"
 
 	"github.com/rs/zerolog/log"
 	"github.com/tarm/serial"
@@ -25,16 +24,21 @@ func OpenPort(config *serial.Config) (*SerialPort, error) {
 	return &SerialPort{port, sync.Mutex{}, make(chan struct{})}, nil
 }
 
-func (s *SerialPort) Close() {
+func (s *SerialPort) Close() error {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+
 	close(s.done)
+
 	if s.Port != nil {
-		if err := s.Port.Close(); errs.NoMsg(err, "file already closed") {
+		if err := s.Port.Close(); err != nil {
 			log.Error().Err(err).Msg("failed to close port")
-			return
+			return fmt.Errorf("failed to close port: %w", err)
 		}
+		s.Port = nil
 	}
 
-	s.Port = nil
+	return nil
 }
 
 func (s *SerialPort) Write(ctx context.Context, payload []byte) error {
@@ -43,28 +47,26 @@ func (s *SerialPort) Write(ctx context.Context, payload []byte) error {
 
 	select {
 	case <-ctx.Done():
-		// Cancelled from outside, close the port
-		if s.Port != nil {
-			s.Port.Close()
-		}
-		if err := ctx.Err(); err != nil {
-			return fmt.Errorf(err.Error())
-		}
-		return fmt.Errorf("cancelled")
+		// Cancelled from outside
+		return fmt.Errorf("write operation cancelled: %w", ctx.Err())
 
 	case <-s.done:
 		// Done channel is closed
-		return fmt.Errorf("channel closed")
+		return fmt.Errorf("write operation failed because the done channel is closed")
 
 	default:
+		// Neither ctx.Done() nor s.done is ready, continue to the Write operation
 		_, err := s.Port.Write(payload)
-		return err
+		if err != nil {
+			return fmt.Errorf("failed to write payload: %w", err)
+		}
+		return nil
 	}
 }
 
 func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
-	readCtx, cancelled := context.WithCancel(ctx)
-	defer cancelled()
+	readCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -81,29 +83,13 @@ func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
 		} else {
 			res <- n
 		}
+		cancel() // Cancel the readCtx when we're done
 	}()
 
-	// Start a goroutine to listen to cancellation signals
-	go func() {
-		select {
-		case <-ctx.Done():
-			// Cancelled from outside
-			log.Info().Msg("Read operation was cancelled by the user")
-
-		case <-s.done:
-			// Done channel is closed
-			log.Warn().Str("reason", "channel is closed").Msg("Read operation was cancelled internally")
-
-		case <-readCtx.Done():
-			// Read context is completed
-			log.Info().Msg("Read operation is completed")
-		}
-	}()
-	
 	// Wait for either the read to complete or the context to be done
 	select {
-	case <-ctx.Done():
-		return 0, ctx.Err()
+	case <-readCtx.Done():
+		return 0, nil
 	case n := <-res:
 		return n, nil
 	case err := <-errs:
