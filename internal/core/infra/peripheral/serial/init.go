@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"vm-link2500/pkg/utils/errs"
+	"vm-link2500/pkg/helpers/errs"
 
 	"github.com/rs/zerolog/log"
 	"github.com/tarm/serial"
@@ -28,7 +28,7 @@ func OpenPort(config *serial.Config) (*SerialPort, error) {
 func (s *SerialPort) Close() {
 	close(s.done)
 	if s.Port != nil {
-		if err := s.Port.Close(); errs.Not(err, "file already closed") {
+		if err := s.Port.Close(); errs.NoMsg(err, "file already closed") {
 			log.Error().Err(err).Msg("failed to close port")
 			return
 		}
@@ -43,14 +43,18 @@ func (s *SerialPort) Write(ctx context.Context, payload []byte) error {
 
 	select {
 	case <-ctx.Done():
-		// Cancelled, close the port
-		s.Close()
+		// Cancelled from outside, close the port
+		if s.Port != nil {
+			s.Port.Close()
+		}
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf(err.Error())
+		}
 		return fmt.Errorf("cancelled")
 
 	case <-s.done:
-		// Done channel is closed, close the port
-		s.Close()
-		return fmt.Errorf("cancelled")
+		// Done channel is closed
+		return fmt.Errorf("channel closed")
 
 	default:
 		_, err := s.Port.Write(payload)
@@ -62,13 +66,33 @@ func (s *SerialPort) Read(ctx context.Context, payload []byte) (int, error) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
+	readCtx, cancelled := context.WithCancel(context.Background())
 	go func() {
-		<-ctx.Done()
-		log.Warn().Str("reason", ctx.Err().Error()).Msg("port is closed")
-		if s.Port != nil {
-			s.Port.Close()
+		select {
+		case <-ctx.Done():
+			// Cancelled from outside, close the port
+			if s.Port != nil {
+				s.Port.Close()
+			}
+			if err := ctx.Err(); err != nil {
+				log.Warn().Str("reason", err.Error()).Msg("port is closed")
+				return
+			}
+			log.Info().Msg("port is closed by user")
+
+		case <-s.done:
+			// Done channel is closed
+			log.Warn().Str("reason", "channel is closed").Msg("port is closed")
+
+		case <-readCtx.Done():
+			// Read context is completed
+			log.Info().Msg("read serial data is completed")
 		}
 	}()
 
-	return s.Port.Read(payload)
+	n, err := s.Port.Read(payload)
+
+	cancelled()
+
+	return n, err
 }

@@ -3,8 +3,7 @@ package http
 import (
 	"fmt"
 	"net/http"
-
-	"vm-link2500/pkg/utils/errs"
+	"vm-link2500/pkg/helpers/errs"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -75,46 +74,46 @@ func Forbidden(ctx *gin.Context, cause error) {
 
 func translateError(err error) (int, string) {
 	// 400
-	if errs.Is(err, "invalid request") {
+	if errs.HasMsg(err, "invalid request") {
 		return http.StatusBadRequest, errors.Cause(err).Error()
 	}
 
-	if errs.Is(err, "exist") {
+	if errs.HasMsg(err, "exist") {
 		return http.StatusBadRequest, errors.Cause(err).Error()
 	}
 
-	if errs.Is(err, "device id") {
+	if errs.HasMsg(err, "device id") {
 		return http.StatusBadRequest, "device ID is invalid"
 	}
 
-	if errs.Is(err, "decrypt") {
+	if errs.HasMsg(err, "decrypt") {
 		return http.StatusBadRequest, "data is invalid"
 	}
 
-	if errs.Is(err, "invalid data") {
+	if errs.HasMsg(err, "invalid data") {
 		return http.StatusBadRequest, "data is invalid"
 	}
 
 	// 403
-	if errs.Is(err, "signature") {
+	if errs.HasMsg(err, "signature") {
 		return http.StatusBadRequest, errors.Cause(err).Error()
 	}
 
-	if errs.Is(err, "forbidden") {
+	if errs.HasMsg(err, "forbidden") {
 		return http.StatusForbidden, "no permission"
 	}
 
-	if errs.Is(err, "no permission") {
+	if errs.HasMsg(err, "no permission") {
 		return http.StatusForbidden, err.Error()
 	}
 
 	// 404
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if errs.Is(err, gorm.ErrRecordNotFound) {
 		return http.StatusNotFound, "no data"
 	}
 
 	// 500
-	if errs.Is(err, "rpc error") {
+	if errs.HasMsg(err, "rpc error") {
 		return http.StatusInternalServerError, errors.Cause(err).Error()
 	}
 
