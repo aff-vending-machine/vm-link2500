@@ -53,7 +53,7 @@ COPY --from=builder --chown=appuser:appuser /bin/app /bin/app
 USER appuser
 
 # Start the application
-CMD ["--device=/dev/ttyACM0", "/bin/app"]
+CMD ["/bin/app"]
 
 # docker compose example
 # version: '3'

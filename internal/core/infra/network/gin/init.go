@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"vm-link2500/config"
+	"vm-link2500/configs"
 	"vm-link2500/pkg/log"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ type App struct {
 	Address string
 }
 
-func New(cfg config.GinConfig) *App {
+func New(cfg configs.GinConfig) *App {
 	// Create a new Zerolog logger with a human-readable console formatter
 	logger := log.ColorConsole()
 
